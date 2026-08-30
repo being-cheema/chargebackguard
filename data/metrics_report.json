@@ -1,0 +1,234 @@
+{
+  "evaluated_at": "2026-08-30T14:34:39.082Z",
+  "total_held_out_samples": 15,
+  "threshold_used": 0.75,
+  "confusion_matrix": {
+    "true_positives": 5,
+    "false_positives": 0,
+    "true_negatives": 6,
+    "false_negatives": 4
+  },
+  "metrics": {
+    "precision": 1,
+    "recall": 0.556,
+    "f1_score": 0.714,
+    "accuracy": 0.733,
+    "specificity": 1
+  },
+  "financial_impact": {
+    "total_held_out_dispute_volume_inr": 289319,
+    "value_recovered_via_auto_approval_inr": 90018,
+    "human_review_queue_volume_inr": 199301,
+    "ops_and_network_penalty_cost_inr": 0,
+    "net_economic_benefit_auto_path_inr": 90018,
+    "assumptions": {
+      "false_positive_penalty_inr": 4000,
+      "human_review_note": "FN (false negative) cases are not lost — they are safely routed to the human review queue for manual inspection and evidence gathering."
+    }
+  },
+  "reason_code_performance": {
+    "1061": {
+      "total": 1,
+      "won": 0,
+      "lost": 1,
+      "tp": 0,
+      "fp": 0,
+      "tn": 1,
+      "fn": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    },
+    "1064": {
+      "total": 1,
+      "won": 0,
+      "lost": 1,
+      "tp": 0,
+      "fp": 0,
+      "tn": 1,
+      "fn": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    },
+    "4841": {
+      "total": 1,
+      "won": 1,
+      "lost": 0,
+      "tp": 1,
+      "fp": 0,
+      "tn": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    "RZP01": {
+      "total": 3,
+      "won": 2,
+      "lost": 1,
+      "tp": 2,
+      "fp": 0,
+      "tn": 1,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    "13.1": {
+      "total": 1,
+      "won": 1,
+      "lost": 0,
+      "tp": 0,
+      "fp": 0,
+      "tn": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    },
+    "13.2": {
+      "total": 2,
+      "won": 1,
+      "lost": 1,
+      "tp": 0,
+      "fp": 0,
+      "tn": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    },
+    "RZP04": {
+      "total": 2,
+      "won": 1,
+      "lost": 1,
+      "tp": 0,
+      "fp": 0,
+      "tn": 1,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    },
+    "RZP06": {
+      "total": 2,
+      "won": 2,
+      "lost": 0,
+      "tp": 2,
+      "fp": 0,
+      "tn": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1
+    },
+    "RZP00": {
+      "total": 1,
+      "won": 0,
+      "lost": 1,
+      "tp": 0,
+      "fp": 0,
+      "tn": 1,
+      "fn": 0,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    },
+    "13.3": {
+      "total": 1,
+      "won": 1,
+      "lost": 0,
+      "tp": 0,
+      "fp": 0,
+      "tn": 0,
+      "fn": 1,
+      "precision": 0,
+      "recall": 0,
+      "f1": 0
+    }
+  },
+  "threshold_sensitivity_curve": [
+    {
+      "threshold": 0.5,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "auto_submit_rate": 0.6,
+      "value_recovered_auto_inr": 177554,
+      "net_benefit_auto_inr": 177554
+    },
+    {
+      "threshold": 0.55,
+      "precision": 1,
+      "recall": 0.889,
+      "f1": 0.941,
+      "auto_submit_rate": 0.533,
+      "value_recovered_auto_inr": 164143,
+      "net_benefit_auto_inr": 164143
+    },
+    {
+      "threshold": 0.6,
+      "precision": 1,
+      "recall": 0.556,
+      "f1": 0.714,
+      "auto_submit_rate": 0.333,
+      "value_recovered_auto_inr": 90018,
+      "net_benefit_auto_inr": 90018
+    },
+    {
+      "threshold": 0.65,
+      "precision": 1,
+      "recall": 0.556,
+      "f1": 0.714,
+      "auto_submit_rate": 0.333,
+      "value_recovered_auto_inr": 90018,
+      "net_benefit_auto_inr": 90018
+    },
+    {
+      "threshold": 0.7,
+      "precision": 1,
+      "recall": 0.556,
+      "f1": 0.714,
+      "auto_submit_rate": 0.333,
+      "value_recovered_auto_inr": 90018,
+      "net_benefit_auto_inr": 90018
+    },
+    {
+      "threshold": 0.75,
+      "precision": 1,
+      "recall": 0.556,
+      "f1": 0.714,
+      "auto_submit_rate": 0.333,
+      "value_recovered_auto_inr": 90018,
+      "net_benefit_auto_inr": 90018
+    },
+    {
+      "threshold": 0.8,
+      "precision": 1,
+      "recall": 0.556,
+      "f1": 0.714,
+      "auto_submit_rate": 0.333,
+      "value_recovered_auto_inr": 90018,
+      "net_benefit_auto_inr": 90018
+    },
+    {
+      "threshold": 0.85,
+      "precision": 1,
+      "recall": 0.556,
+      "f1": 0.714,
+      "auto_submit_rate": 0.333,
+      "value_recovered_auto_inr": 90018,
+      "net_benefit_auto_inr": 90018
+    },
+    {
+      "threshold": 0.9,
+      "precision": 1,
+      "recall": 0.556,
+      "f1": 0.714,
+      "auto_submit_rate": 0.333,
+      "value_recovered_auto_inr": 90018,
+      "net_benefit_auto_inr": 90018
+    }
+  ]
+}

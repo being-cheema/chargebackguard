@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-08-30T14:34:44.045Z",
+  "dataset_sha256": "83c44b5659ca2e7ad455d4214ec970ce4573e5a00110a0251204732c3193cad6",
+  "total_records": 450,
+  "train_records": 315,
+  "held_out_records": 135,
+  "split_ratio": "70/30",
+  "reason_codes_represented": [
+    "RZP04",
+    "13.1",
+    "RZP06",
+    "RZP05",
+    "4841",
+    "RZP01",
+    "13.3",
+    "1061",
+    "1064",
+    "C28",
+    "13.2",
+    "RZP00",
+    "C02",
+    "1062"
+  ],
+  "notes": "Committed fixed train/held-out split for ChargebackGuard AI Buildathon Track 02 evaluation."
+}
