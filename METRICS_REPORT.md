@@ -1,7 +1,7 @@
 # ChargebackGuard — Held-Out Test Set Evaluation Report
 
 > **Razorpay AI Buildathon — Track 02: AI Risk Manager**  
-> **Evaluation Timestamp**: `2026-08-30T14:34:39.082Z`  
+> **Evaluation Timestamp**: `2026-08-30T14:48:34.655Z`  
 > **Held-Out Test Sample Size**: **15 cases** (Fixed 30% split from `data/split_manifest.json`)  
 > **Active Decision Gate Operating Threshold**: **`0.75`**
 
