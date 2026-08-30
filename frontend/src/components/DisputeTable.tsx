@@ -11,12 +11,14 @@ import {
 } from 'lucide-react';
 import type { DisputeRecord } from '../types';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 interface DisputeTableProps {
   onSelectDispute: (disputeId: string) => void;
 }
 
 export const DisputeTable: React.FC<DisputeTableProps> = ({ onSelectDispute }) => {
+  const { token, isAuthenticated } = useAuth();
   const [disputes, setDisputes] = useState<DisputeRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
@@ -58,10 +60,14 @@ export const DisputeTable: React.FC<DisputeTableProps> = ({ onSelectDispute }) =
   }, [statusFilter, reasonFilter, searchQuery, sortBy, page]);
 
   const handleBatchGate = async () => {
+    if (!isAuthenticated || !token) {
+      setBatchMessage('🔒 Please sign in as a reviewer to execute decision gate on batch records.');
+      return;
+    }
     setBatchLoading(true);
     setBatchMessage(null);
     try {
-      const res = await api.batchGateDisputes(0.75);
+      const res = await api.batchGateDisputes(0.75, token);
       setBatchMessage(
         `⚡ Gate Executed: ${res.autoApprovedCount} auto-approved (ready_to_submit), ${res.reviewCount} routed to human review.`
       );

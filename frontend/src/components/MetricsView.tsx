@@ -9,12 +9,15 @@ import {
 } from 'lucide-react';
 import type { MetricEvaluationReport } from '../types';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export const MetricsView: React.FC = () => {
+  const { token, isAuthenticated } = useAuth();
   const [report, setReport] = useState<MetricEvaluationReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [simulatedThreshold, setSimulatedThreshold] = useState<number>(0.75);
+  const [evalError, setEvalError] = useState<string | null>(null);
 
   const fetchMetrics = async () => {
     setLoading(true);
@@ -34,12 +37,18 @@ export const MetricsView: React.FC = () => {
   }, []);
 
   const handleRecalculate = async () => {
+    if (!isAuthenticated || !token) {
+      setEvalError('🔒 Please sign in as a reviewer to re-run held-out evaluation.');
+      return;
+    }
     setRecalculating(true);
+    setEvalError(null);
     try {
-      const res = await api.recalculateMetrics();
+      const res = await api.recalculateMetrics(token);
       setReport(res.results);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Recalculation error:', err);
+      setEvalError(err.message || 'Evaluation failed.');
     } finally {
       setRecalculating(false);
     }
@@ -90,6 +99,13 @@ export const MetricsView: React.FC = () => {
             <span>{recalculating ? 'Evaluating...' : 'Re-Run Evaluation'}</span>
           </button>
         </div>
+
+        {evalError && (
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center space-x-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 text-amber-400" />
+            <span>{evalError}</span>
+          </div>
+        )}
 
         {/* Framing callout */}
         <div className="p-4 rounded-xl bg-blue-950/30 border border-blue-500/20 text-xs text-slate-300 space-y-1.5">

@@ -45,7 +45,7 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.body.error).toBe('Invalid Credentials');
   });
 
-  test('GET /api/disputes returns paginated disputes list and status counts', async () => {
+  test('GET /api/disputes returns paginated disputes list and status counts (Public)', async () => {
     const res = await request(app).get('/api/disputes?limit=10&offset=0');
     expect(res.status).toBe(200);
     expect(res.body.disputes.length).toBeLessThanOrEqual(10);
@@ -53,7 +53,7 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.body.statusCounts).toBeDefined();
   });
 
-  test('GET /api/disputes/:id returns single dispute with score breakdown', async () => {
+  test('GET /api/disputes/:id returns single dispute with score breakdown (Public)', async () => {
     const res = await request(app).get(`/api/disputes/${sampleDisputeId}`);
     expect(res.status).toBe(200);
     expect(res.body.dispute.id).toBe(sampleDisputeId);
@@ -61,30 +61,75 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.body.scoreResult.score).toBeGreaterThanOrEqual(0);
   });
 
-  test('POST /api/disputes/:id/score calculates and updates score', async () => {
+  test('POST /api/disputes/:id/score rejects unauthenticated requests with 401', async () => {
     const res = await request(app).post(`/api/disputes/${sampleDisputeId}/score`).send({
       threshold: 0.75,
     });
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /api/disputes/:id/score succeeds with reviewer token', async () => {
+    const res = await request(app)
+      .post(`/api/disputes/${sampleDisputeId}/score`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({
+        threshold: 0.75,
+      });
     expect(res.status).toBe(200);
     expect(res.body.scoreResult.score).toBeDefined();
     expect(res.body.scoreResult.factors).toBeDefined();
   });
 
-  test('POST /api/disputes/:id/draft generates non-hallucinating letter', async () => {
+  test('POST /api/disputes/:id/draft rejects unauthenticated requests with 401', async () => {
     const res = await request(app).post(`/api/disputes/${sampleDisputeId}/draft`);
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /api/disputes/:id/draft succeeds with reviewer token', async () => {
+    const res = await request(app)
+      .post(`/api/disputes/${sampleDisputeId}/draft`)
+      .set('Authorization', `Bearer ${reviewerToken}`);
     expect(res.status).toBe(200);
     expect(res.body.draftResult.letter.length).toBeGreaterThan(0);
     expect(res.body.draftResult.validation.isValid).toBe(true);
     expect(res.body.draftResult.characterCount).toBeLessThanOrEqual(1000);
   });
 
-  test('POST /api/disputes/:id/gate executes decision gate and updates status', async () => {
+  test('POST /api/disputes/:id/gate rejects unauthenticated requests with 401', async () => {
     const res = await request(app).post(`/api/disputes/${sampleDisputeId}/gate`).send({
       threshold: 0.75,
     });
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /api/disputes/:id/gate succeeds with reviewer token', async () => {
+    const res = await request(app)
+      .post(`/api/disputes/${sampleDisputeId}/gate`)
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({
+        threshold: 0.75,
+      });
     expect(res.status).toBe(200);
     expect(res.body.gateResult.status).toBeDefined();
     expect(['ready_to_submit', 'needs_human_review']).toContain(res.body.gateResult.status);
+  });
+
+  test('POST /api/disputes/batch-gate rejects unauthenticated requests with 401', async () => {
+    const res = await request(app).post('/api/disputes/batch-gate').send({
+      threshold: 0.75,
+    });
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /api/disputes/batch-gate succeeds with reviewer token', async () => {
+    const res = await request(app)
+      .post('/api/disputes/batch-gate')
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({
+        threshold: 0.75,
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.totalProcessed).toBeGreaterThanOrEqual(0);
   });
 
   test('POST /api/disputes/:id/review rejects unauthenticated requests with 401', async () => {
@@ -114,7 +159,7 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(auditRes.body.logs.some((l: any) => l.action === 'HUMAN_APPROVED')).toBe(true);
   });
 
-  test('GET /api/metrics returns held-out metrics report and sensitivity curve', async () => {
+  test('GET /api/metrics returns held-out metrics report and sensitivity curve (Public)', async () => {
     const res = await request(app).get('/api/metrics');
     expect(res.status).toBe(200);
     expect(res.body.metrics.precision).toBeGreaterThan(0);
@@ -122,7 +167,20 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.body.threshold_sensitivity_curve.length).toBeGreaterThan(0);
   });
 
-  test('POST /api/simulate performs interactive real-time scoring and drafting', async () => {
+  test('POST /api/metrics/evaluate rejects unauthenticated requests with 401', async () => {
+    const res = await request(app).post('/api/metrics/evaluate');
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /api/metrics/evaluate succeeds with reviewer token', async () => {
+    const res = await request(app)
+      .post('/api/metrics/evaluate')
+      .set('Authorization', `Bearer ${reviewerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.results.metrics.precision).toBeGreaterThan(0);
+  });
+
+  test('POST /api/simulate is intentionally public for interactive judge sandbox evaluation', async () => {
     const res = await request(app).post('/api/simulate').send({
       reason_code: 'RZP01',
       amount: 850000,

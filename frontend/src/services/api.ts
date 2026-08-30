@@ -43,7 +43,7 @@ export const api = {
     });
   },
 
-  // Disputes
+  // Disputes (Public Read-Only)
   getDisputes: async (params: {
     status?: string;
     reason_code?: string;
@@ -76,26 +76,35 @@ export const api = {
     }>(`/disputes/${id}`);
   },
 
-  scoreDispute: async (id: string, threshold: number = 0.75) => {
+  // State-Mutating Operations (Require Reviewer Auth Token)
+  scoreDispute: async (id: string, threshold: number = 0.75, token?: string | null) => {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     return fetchJson<{
       disputeId: string;
       scoreResult: ScoreResult;
     }>(`/disputes/${id}/score`, {
       method: 'POST',
+      headers,
       body: JSON.stringify({ threshold }),
     });
   },
 
-  draftLetter: async (id: string) => {
+  draftLetter: async (id: string, token?: string | null) => {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     return fetchJson<{
       disputeId: string;
       draftResult: DraftResult;
     }>(`/disputes/${id}/draft`, {
       method: 'POST',
+      headers,
     });
   },
 
-  gateDispute: async (id: string, threshold: number = 0.75) => {
+  gateDispute: async (id: string, threshold: number = 0.75, token?: string | null) => {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     return fetchJson<{
       message: string;
       gateResult: {
@@ -108,11 +117,14 @@ export const api = {
       };
     }>(`/disputes/${id}/gate`, {
       method: 'POST',
+      headers,
       body: JSON.stringify({ threshold }),
     });
   },
 
-  batchGateDisputes: async (threshold: number = 0.75) => {
+  batchGateDisputes: async (threshold: number = 0.75, token?: string | null) => {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     return fetchJson<{
       message: string;
       totalProcessed: number;
@@ -122,6 +134,7 @@ export const api = {
       disputes: Array<{ id: string; status: string; score: number; isAutoSubmitted: boolean }>;
     }>('/disputes/batch-gate', {
       method: 'POST',
+      headers,
       body: JSON.stringify({ threshold }),
     });
   },
@@ -150,7 +163,7 @@ export const api = {
     });
   },
 
-  // Audit
+  // Audit (Public Read-Only)
   getDisputeAuditLogs: async (disputeId: string) => {
     return fetchJson<{
       disputeId: string;
@@ -171,16 +184,19 @@ export const api = {
     return fetchJson<MetricEvaluationReport>('/metrics');
   },
 
-  recalculateMetrics: async () => {
+  recalculateMetrics: async (token?: string | null) => {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     return fetchJson<{
       message: string;
       results: MetricEvaluationReport;
     }>('/metrics/evaluate', {
       method: 'POST',
+      headers,
     });
   },
 
-  // Simulation
+  // Simulation Sandbox (Intentionally Public for live judge interaction)
   getReasonCodes: async () => {
     return fetchJson<{
       reasonCodes: ReasonCodeInfo[];

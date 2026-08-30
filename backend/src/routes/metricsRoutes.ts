@@ -2,10 +2,11 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { runEvaluation } from '../metrics/evaluate';
+import { requireReviewerAuth } from '../middleware/auth';
 
 export const metricsRouter = Router();
 
-// GET /api/metrics - return latest held-out evaluation report and sensitivity curve
+// GET /api/metrics - return latest held-out evaluation report and sensitivity curve (Public read-only)
 metricsRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const reportPath = path.resolve(__dirname, '../../../../data/metrics_report.json');
@@ -22,8 +23,8 @@ metricsRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// POST /api/metrics/evaluate - re-run held-out evaluation and regenerate reports
-metricsRouter.post('/evaluate', async (req: Request, res: Response): Promise<void> => {
+// POST /api/metrics/evaluate - re-run held-out evaluation and regenerate reports (Requires Reviewer Auth)
+metricsRouter.post('/evaluate', requireReviewerAuth, async (req: Request, res: Response): Promise<void> => {
   try {
     const results = runEvaluation();
     res.json({

@@ -74,10 +74,14 @@ export const DisputeDetailModal: React.FC<DisputeDetailModalProps> = ({
   }, [disputeId]);
 
   const handleTriggerDraft = async () => {
+    if (!isAuthenticated || !token) {
+      onOpenLogin();
+      return;
+    }
     setDraftingLoading(true);
     setActionError(null);
     try {
-      const res = await api.draftLetter(disputeId);
+      const res = await api.draftLetter(disputeId, token);
       setExplanationLetter(res.draftResult.letter);
       await loadDisputeData();
     } catch (err: any) {
@@ -88,10 +92,14 @@ export const DisputeDetailModal: React.FC<DisputeDetailModalProps> = ({
   };
 
   const handleExecuteGate = async () => {
+    if (!isAuthenticated || !token) {
+      onOpenLogin();
+      return;
+    }
     setDraftingLoading(true);
     setActionError(null);
     try {
-      const res = await api.gateDispute(disputeId, 0.75);
+      const res = await api.gateDispute(disputeId, 0.75, token);
       setActionSuccess(`Gate executed! New status: ${res.gateResult.status}`);
       await loadDisputeData();
       onRefreshList();

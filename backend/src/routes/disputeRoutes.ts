@@ -27,7 +27,7 @@ function parseDisputeRow(row: any): DisputeRecord {
   };
 }
 
-// GET /api/disputes - list with search, filter, sort, pagination
+// GET /api/disputes - list with search, filter, sort, pagination (Public read-only)
 disputeRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const db = await getDb();
@@ -121,7 +121,7 @@ disputeRouter.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// GET /api/disputes/:id - get single dispute with real-time scoring
+// GET /api/disputes/:id - get single dispute with real-time scoring (Public read-only)
 disputeRouter.get('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const disputeId = String(req.params.id);
@@ -146,168 +146,189 @@ disputeRouter.get('/:id', async (req: Request, res: Response): Promise<void> => 
   }
 });
 
-// POST /api/disputes/:id/score - score a single dispute
-disputeRouter.post('/:id/score', validateBody(gateDisputeSchema), async (req: Request, res: Response): Promise<void> => {
-  try {
-    const disputeId = String(req.params.id);
-    const db = await getDb();
-    const result = await db.query(`SELECT * FROM disputes WHERE id = $1`, [disputeId]);
+// POST /api/disputes/:id/score - score a single dispute (Requires Reviewer Auth)
+disputeRouter.post(
+  '/:id/score',
+  requireReviewerAuth,
+  validateBody(gateDisputeSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const disputeId = String(req.params.id);
+      const db = await getDb();
+      const result = await db.query(`SELECT * FROM disputes WHERE id = $1`, [disputeId]);
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Not Found', message: `Dispute ${disputeId} not found.` });
-      return;
-    }
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Not Found', message: `Dispute ${disputeId} not found.` });
+        return;
+      }
 
-    const dispute = parseDisputeRow(result.rows[0]);
-    const threshold = req.body.threshold ?? 0.75;
-    const scoreResult = calculateDisputeScore(dispute, { threshold });
+      const dispute = parseDisputeRow(result.rows[0]);
+      const threshold = req.body.threshold ?? 0.75;
+      const scoreResult = calculateDisputeScore(dispute, { threshold });
 
-    // Update dispute score in DB
-    await db.query(
-      `UPDATE disputes SET win_score = $1, factors = $2 WHERE id = $3`,
-      [scoreResult.score, JSON.stringify(scoreResult.factors), dispute.id]
-    );
+      // Update dispute score in DB
+      await db.query(
+        `UPDATE disputes SET win_score = $1, factors = $2 WHERE id = $3`,
+        [scoreResult.score, JSON.stringify(scoreResult.factors), dispute.id]
+      );
 
-    // Audit log
-    await createAuditLogEntry({
-      dispute_id: dispute.id,
-      action: 'SCORED',
-      score: scoreResult.score,
-      decision: `Score computed: ${scoreResult.score} (${scoreResult.recommendation})`,
-      threshold_used: threshold,
-      factors: scoreResult.factors,
-      reviewer_notes: `Deterministic scoring evaluated: ${scoreResult.factors.positive.length} positive factors, ${scoreResult.factors.negative.length} negative factors.`,
-    });
-
-    res.json({
-      disputeId: dispute.id,
-      scoreResult,
-    });
-  } catch (err: any) {
-    console.error('Score dispute error:', err);
-    res.status(500).json({ error: 'Server Error', message: err.message });
-  }
-});
-
-// POST /api/disputes/:id/draft - draft explanation letter with anti-hallucination validation
-disputeRouter.post('/:id/draft', async (req: Request, res: Response): Promise<void> => {
-  try {
-    const disputeId = String(req.params.id);
-    const db = await getDb();
-    const result = await db.query(`SELECT * FROM disputes WHERE id = $1`, [disputeId]);
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Not Found', message: `Dispute ${disputeId} not found.` });
-      return;
-    }
-
-    const dispute = parseDisputeRow(result.rows[0]);
-    const scoreResult = calculateDisputeScore(dispute);
-    const draftResult = await draftExplanationLetter(dispute, scoreResult);
-
-    // Update evidence in DB
-    const updatedEvidence = {
-      ...dispute.evidence,
-      explanation_letter: draftResult.letter,
-    };
-
-    await db.query(
-      `UPDATE disputes SET evidence = $1 WHERE id = $2`,
-      [JSON.stringify(updatedEvidence), dispute.id]
-    );
-
-    // Audit log
-    await createAuditLogEntry({
-      dispute_id: dispute.id,
-      action: 'DRAFTED',
-      score: scoreResult.score,
-      decision: `Letter drafted via ${draftResult.provider} (${draftResult.characterCount} chars)`,
-      threshold_used: 0.75,
-      factors: scoreResult.factors,
-      explanation_letter: draftResult.letter,
-      reviewer_notes: draftResult.validation.isValid
-        ? `Anti-hallucination validation PASSED. Referenced: [${draftResult.validation.referencedPresentEvidence.join(', ')}].`
-        : `Validation warnings: ${draftResult.validation.violations.join('; ')}`,
-    });
-
-    res.json({
-      disputeId: dispute.id,
-      draftResult,
-    });
-  } catch (err: any) {
-    console.error('Draft letter error:', err);
-    res.status(500).json({ error: 'Server Error', message: err.message });
-  }
-});
-
-// POST /api/disputes/:id/gate - execute full decision gate pipeline
-disputeRouter.post('/:id/gate', validateBody(gateDisputeSchema), async (req: Request, res: Response): Promise<void> => {
-  try {
-    const disputeId = String(req.params.id);
-    const db = await getDb();
-    const result = await db.query(`SELECT * FROM disputes WHERE id = $1`, [disputeId]);
-
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Not Found', message: `Dispute ${disputeId} not found.` });
-      return;
-    }
-
-    const dispute = parseDisputeRow(result.rows[0]);
-    const threshold = req.body.threshold ?? 0.75;
-    const gateResult = await processDisputeDecisionGate(dispute, threshold);
-
-    res.json({
-      message: `Dispute decision gate executed successfully.`,
-      gateResult,
-    });
-  } catch (err: any) {
-    console.error('Gate dispute error:', err);
-    res.status(500).json({ error: 'Server Error', message: err.message });
-  }
-});
-
-// POST /api/disputes/batch-gate - execute decision gate across all open/under_review disputes
-disputeRouter.post('/batch-gate', validateBody(gateDisputeSchema), async (req: Request, res: Response): Promise<void> => {
-  try {
-    const db = await getDb();
-    const threshold = req.body.threshold ?? 0.75;
-
-    const result = await db.query(
-      `SELECT * FROM disputes WHERE status IN ('open', 'under_review') ORDER BY created_at DESC LIMIT 100`
-    );
-    const disputes = result.rows.map(parseDisputeRow);
-
-    const processed = [];
-    let autoApprovedCount = 0;
-    let reviewCount = 0;
-
-    for (const d of disputes) {
-      const gateRes = await processDisputeDecisionGate(d, threshold);
-      if (gateRes.isAutoSubmitted) autoApprovedCount++;
-      else reviewCount++;
-      processed.push({
-        id: d.id,
-        status: gateRes.status,
-        score: gateRes.scoreResult.score,
-        isAutoSubmitted: gateRes.isAutoSubmitted,
+      // Audit log
+      await createAuditLogEntry({
+        dispute_id: dispute.id,
+        action: 'SCORED',
+        score: scoreResult.score,
+        decision: `Score computed: ${scoreResult.score} (${scoreResult.recommendation})`,
+        threshold_used: threshold,
+        factors: scoreResult.factors,
+        reviewer_id: req.reviewer?.id,
+        reviewer_notes: `Deterministic scoring evaluated by ${req.reviewer?.name || 'Reviewer'}: ${scoreResult.factors.positive.length} positive factors, ${scoreResult.factors.negative.length} negative factors.`,
       });
+
+      res.json({
+        disputeId: dispute.id,
+        scoreResult,
+      });
+    } catch (err: any) {
+      console.error('Score dispute error:', err);
+      res.status(500).json({ error: 'Server Error', message: err.message });
     }
-
-    res.json({
-      message: `Processed decision gate for ${disputes.length} disputes.`,
-      totalProcessed: disputes.length,
-      autoApprovedCount,
-      reviewCount,
-      thresholdUsed: threshold,
-      disputes: processed,
-    });
-  } catch (err: any) {
-    console.error('Batch gate error:', err);
-    res.status(500).json({ error: 'Server Error', message: err.message });
   }
-});
+);
 
-// POST /api/disputes/:id/review - protected human reviewer approval/override
+// POST /api/disputes/:id/draft - draft explanation letter (Requires Reviewer Auth)
+disputeRouter.post(
+  '/:id/draft',
+  requireReviewerAuth,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const disputeId = String(req.params.id);
+      const db = await getDb();
+      const result = await db.query(`SELECT * FROM disputes WHERE id = $1`, [disputeId]);
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Not Found', message: `Dispute ${disputeId} not found.` });
+        return;
+      }
+
+      const dispute = parseDisputeRow(result.rows[0]);
+      const scoreResult = calculateDisputeScore(dispute);
+      const draftResult = await draftExplanationLetter(dispute, scoreResult);
+
+      // Update evidence in DB
+      const updatedEvidence = {
+        ...dispute.evidence,
+        explanation_letter: draftResult.letter,
+      };
+
+      await db.query(
+        `UPDATE disputes SET evidence = $1 WHERE id = $2`,
+        [JSON.stringify(updatedEvidence), dispute.id]
+      );
+
+      // Audit log
+      await createAuditLogEntry({
+        dispute_id: dispute.id,
+        action: 'DRAFTED',
+        score: scoreResult.score,
+        decision: `Letter drafted via ${draftResult.provider} (${draftResult.characterCount} chars)`,
+        threshold_used: 0.75,
+        factors: scoreResult.factors,
+        explanation_letter: draftResult.letter,
+        reviewer_id: req.reviewer?.id,
+        reviewer_notes: draftResult.validation.isValid
+          ? `Anti-hallucination validation PASSED. Referenced: [${draftResult.validation.referencedPresentEvidence.join(', ')}].`
+          : `Validation warnings: ${draftResult.validation.violations.join('; ')}`,
+      });
+
+      res.json({
+        disputeId: dispute.id,
+        draftResult,
+      });
+    } catch (err: any) {
+      console.error('Draft letter error:', err);
+      res.status(500).json({ error: 'Server Error', message: err.message });
+    }
+  }
+);
+
+// POST /api/disputes/:id/gate - execute decision gate pipeline (Requires Reviewer Auth)
+disputeRouter.post(
+  '/:id/gate',
+  requireReviewerAuth,
+  validateBody(gateDisputeSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const disputeId = String(req.params.id);
+      const db = await getDb();
+      const result = await db.query(`SELECT * FROM disputes WHERE id = $1`, [disputeId]);
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Not Found', message: `Dispute ${disputeId} not found.` });
+        return;
+      }
+
+      const dispute = parseDisputeRow(result.rows[0]);
+      const threshold = req.body.threshold ?? 0.75;
+      const gateResult = await processDisputeDecisionGate(dispute, threshold);
+
+      res.json({
+        message: `Dispute decision gate executed successfully.`,
+        gateResult,
+      });
+    } catch (err: any) {
+      console.error('Gate dispute error:', err);
+      res.status(500).json({ error: 'Server Error', message: err.message });
+    }
+  }
+);
+
+// POST /api/disputes/batch-gate - execute decision gate across open disputes (Requires Reviewer Auth)
+disputeRouter.post(
+  '/batch-gate',
+  requireReviewerAuth,
+  validateBody(gateDisputeSchema),
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const db = await getDb();
+      const threshold = req.body.threshold ?? 0.75;
+
+      const result = await db.query(
+        `SELECT * FROM disputes WHERE status IN ('open', 'under_review') ORDER BY created_at DESC LIMIT 100`
+      );
+      const disputes = result.rows.map(parseDisputeRow);
+
+      const processed = [];
+      let autoApprovedCount = 0;
+      let reviewCount = 0;
+
+      for (const d of disputes) {
+        const gateRes = await processDisputeDecisionGate(d, threshold);
+        if (gateRes.isAutoSubmitted) autoApprovedCount++;
+        else reviewCount++;
+        processed.push({
+          id: d.id,
+          status: gateRes.status,
+          score: gateRes.scoreResult.score,
+          isAutoSubmitted: gateRes.isAutoSubmitted,
+        });
+      }
+
+      res.json({
+        message: `Processed decision gate for ${disputes.length} disputes.`,
+        totalProcessed: disputes.length,
+        autoApprovedCount,
+        reviewCount,
+        thresholdUsed: threshold,
+        disputes: processed,
+      });
+    } catch (err: any) {
+      console.error('Batch gate error:', err);
+      res.status(500).json({ error: 'Server Error', message: err.message });
+    }
+  }
+);
+
+// POST /api/disputes/:id/review - protected human reviewer approval/override (Requires Reviewer Auth)
 disputeRouter.post(
   '/:id/review',
   requireReviewerAuth,
