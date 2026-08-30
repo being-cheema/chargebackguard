@@ -13,11 +13,12 @@ In online payments, fraudulent or mistaken payment disputes (chargebacks) cause 
 **ChargebackGuard** is an end-to-end AI Risk Management system built specifically for Razorpay payment disputes. It:
 1. **Ingests Disputes** matching Razorpay's exact Disputes API schema.
 2. **Deterministically Scores Win Probabilities** using a pure, inspectable rules+weights engine (strictly **zero LLM in scoring**) with transparent positive/negative factor attribution.
-3. **Drafts Natural-Language Explanation Letters** using Claude (Anthropic API) strictly constrained to $\le 1000$ characters, piped through an **Anti-Hallucination Validator** that strictly rejects any claim referencing missing/null evidence.
-4. **Gates Decisions at a Configurable Threshold (0.75)**: High-confidence cases ($\ge 0.75$) are auto-approved to `ready_to_submit` (draft mode safe), while lower-confidence cases are routed to the `needs_human_review` queue.
+3. **Drafts Natural-Language Explanation Letters** using Claude (Anthropic API) strictly constrained to ≤ 1000 characters, piped through an **Anti-Hallucination Validator** that strictly rejects any claim referencing missing/null evidence.
+4. **Gates Decisions at a Configurable Threshold (0.75)**: High-confidence cases (score ≥ 0.75) are auto-approved to `ready_to_submit` (draft mode safe), while lower-confidence cases are routed to the `needs_human_review` queue.
 5. **Includes Real Razorpay Test-Mode Transactions**: 9 real test transactions created, completed, and captured on Razorpay test rails (via official MCP tools) are stored in the `payments` table and mapped 1:1 to dispute records in the training set.
-6. **Maintains an Immutable Audit Trail** recording every score, draft, gate decision, and reviewer override.
-7. **Delivers Honest Precision/Recall & Cost Metrics** measured against an untouched **held-out test split (135 cases / 30%)** with committed SHA256 checksums.
+6. **Enforces Strict Reviewer JWT Authentication**: All state-mutating endpoints (`score`, `draft`, `gate`, `batch-gate`, `review`, `metrics/evaluate`) strictly require valid reviewer credentials, while public exploration is preserved for the live sandbox simulator (`/simulate`).
+7. **Maintains an Immutable Audit Trail** recording every score, draft, gate decision, and reviewer override.
+8. **Delivers Honest Precision/Recall & Cost Metrics** measured against an untouched **held-out test split (135 cases / 30%)** with committed SHA256 checksums.
 
 ---
 
@@ -25,35 +26,36 @@ In online payments, fraudulent or mistaken payment disputes (chargebacks) cause 
 
 ```mermaid
 flowchart TD
-    subgraph Ingestion & Storage
-        A[Dispute Ingestion<br/>Real Razorpay Schema] --> B[(PostgreSQL / PGlite)]
-        P[Razorpay Test Rails<br/>9 Captured Transactions] --> B
+    subgraph Ingestion_and_Storage["1. Ingestion & Storage"]
+        A["Dispute Ingestion<br/>(Real Razorpay Schema)"] --> B[("PostgreSQL Database<br/>(PGlite Embedded)")]
+        P["Razorpay Test Rails<br/>(9 Captured Transactions)"] --> B
     end
 
-    subgraph Deterministic Core (No LLM)
-        B --> C[Scoring Engine<br/>Rules + Weights + Reason Codes]
-        C --> D[Factor Attribution Breakdown<br/>Positive & Negative Drivers]
+    subgraph Deterministic_Core["2. Deterministic Core (Zero LLM)"]
+        B --> C["Scoring Engine<br/>(Rules + Weights + Reason Codes)"]
+        C --> D["Factor Attribution Breakdown<br/>(Positive & Negative Drivers)"]
     end
 
-    subgraph Bounded LLM Module (Language Only)
-        D --> E[Claude LLM Drafter<br/>Anthropic API / Verified Fallback]
-        E --> F[Anti-Hallucination<br/>Evidence Validator]
-        F --> G[Validated Contest Letter<br/>≤ 1000 chars]
+    subgraph Bounded_LLM_Module["3. Bounded LLM Module (Language Only)"]
+        D --> E["Claude LLM Drafter<br/>(Anthropic API / Verified Fallback)"]
+        E --> F["Anti-Hallucination Validator<br/>(Evidence Presence Check)"]
+        F --> G["Validated Contest Letter<br/>(Max 1,000 Chars)"]
     end
 
-    subgraph Decision Gate & Audit Log
-        C --> H{Win Score ≥ 0.75?<br/>Configurable Threshold}
-        H -- Yes --> I[Status: ready_to_submit<br/>Auto-Approved Safe Draft]
-        H -- No --> J[Status: needs_human_review<br/>Human-in-the-loop Queue]
-        I & J --> K[(Immutable Audit Log)]
+    subgraph Decision_Gate_Audit["4. Decision Gate & Audit Log"]
+        C --> H{"Win Score ≥ 0.75?<br/>(Configurable Threshold)"}
+        H -->|"Yes (Score ≥ 0.75)"| I["Status: ready_to_submit<br/>(Auto-Approved Safe Draft)"]
+        H -->|"No (Score < 0.75)"| J["Status: needs_human_review<br/>(Human Review Queue)"]
+        I --> K[("Immutable Audit Trail")]
+        J --> K
         G --> K
     end
 
-    subgraph Frontend Dashboard (React + Tailwind)
-        K --> L[Queue & Dispute Detail View]
-        K --> M[Metrics & Cost Analysis View]
-        K --> N[Live Sandbox Simulator]
-        O[Reviewer JWT Session<br/>React State Only - Zero Web Storage] -->|Approve / Override| J
+    subgraph Frontend_Dashboard["5. Reviewer Dashboard (React + Tailwind)"]
+        K --> L["Queue & Dispute Detail View"]
+        K --> M["Metrics & Cost Analysis View"]
+        K --> N["Live Sandbox Simulator"]
+        O["Reviewer JWT Session<br/>(React Memory - Zero Storage)"] --> J
     end
 ```
 
@@ -78,15 +80,11 @@ The scoring engine was evaluated strictly against the fixed **held-out 30% split
 
 ### Held-Out Confusion Matrix
 
-```
-                       ┌─────────────────────────┬─────────────────────────┐
-                       │  Predicted AUTO_SUBMIT  │ Predicted HUMAN_REVIEW  │
-┌──────────────────────┼─────────────────────────┼─────────────────────────┤
-│ Actual Outcome: WON  │   TP = 36               │   FN = 42               │
-├──────────────────────┼─────────────────────────┼─────────────────────────┤
-│ Actual Outcome: LOST │   FP = 3                │   TN = 54               │
-└──────────────────────┴─────────────────────────┴─────────────────────────┘
-```
+| | Predicted: AUTO-SUBMIT (`ready_to_submit`) | Predicted: HUMAN REVIEW (`needs_human_review`) | Total |
+| :--- | :---: | :---: | :---: |
+| **Actual Ground Truth: WON** | **TP = 36** (Auto-recovered wins) | **FN = 42** (Routed to human review) | **78** |
+| **Actual Ground Truth: LOST** | **FP = 3** (False positive auto-contests) | **TN = 54** (Correctly held back) | **57** |
+| **Total** | **39** | **96** | **135** |
 
 - **True Positives (TP = 36)**: High-evidence winnable disputes auto-submitted with 0 human touches.
 - **False Positives (FP = 3)**: Only 3 cases with marginal proof incorrectly auto-submitted (minimized by 0.75 threshold).
@@ -95,7 +93,7 @@ The scoring engine was evaluated strictly against the fixed **held-out 30% split
 
 ### False-Positive Cost & Financial ROI Analysis
 - **Assumptions**:
-  - False-Positive Cost ($C_{FP} = \text{₹4,000}$): ₹1,500 merchant ops review waste + ₹2,500 card-network dispute filing fee & excessive dispute ratio flag risk.
+  - False-Positive Cost (C_FP = ₹4,000): ₹1,500 merchant ops review waste + ₹2,500 card-network dispute filing fee & excessive dispute ratio flag risk.
   - Scope: All recovery figures are **strictly scoped to the 36 auto-approved (TP) cases**, avoiding any overstatement of system impact. The ₹36,44,489 volume in the human review queue is handled collaboratively by risk analysts.
 
 | Metric | Value (INR) | Notes |
@@ -195,7 +193,7 @@ Matches Razorpay's real Disputes API schema:
    npm install
    npm run seed        # Seeds 450 disputes & saves split_manifest.json
    npm run evaluate    # Evaluates held-out 30% test set
-   npm test            # Runs all Jest unit & integration tests
+   npm test            # Runs all 36 Jest unit & integration tests
    npm run dev         # Starts backend API on http://localhost:5050
    ```
 
@@ -245,7 +243,7 @@ During the development and testing of ChargebackGuard, we encountered three real
 
 ## 8. Verification & Test Coverage
 
-All test suites pass cleanly:
+All 36 unit and integration test cases pass cleanly:
 
 ```bash
 PASS tests/scoring.test.ts
@@ -279,13 +277,20 @@ PASS tests/api.test.ts
     ✓ GET /health returns healthy status and dispute count
     ✓ POST /api/auth/login succeeds with valid credentials and returns JWT
     ✓ POST /api/auth/login fails with invalid credentials
-    ✓ GET /api/disputes returns paginated disputes list and status counts
-    ✓ GET /api/disputes/:id returns single dispute with score breakdown
-    ✓ POST /api/disputes/:id/score calculates and updates score
-    ✓ POST /api/disputes/:id/draft generates non-hallucinating letter
-    ✓ POST /api/disputes/:id/gate executes decision gate and updates status
+    ✓ GET /api/disputes returns paginated disputes list and status counts (Public)
+    ✓ GET /api/disputes/:id returns single dispute with score breakdown (Public)
+    ✓ POST /api/disputes/:id/score rejects unauthenticated requests with 401
+    ✓ POST /api/disputes/:id/score succeeds with reviewer token
+    ✓ POST /api/disputes/:id/draft rejects unauthenticated requests with 401
+    ✓ POST /api/disputes/:id/draft succeeds with reviewer token
+    ✓ POST /api/disputes/:id/gate rejects unauthenticated requests with 401
+    ✓ POST /api/disputes/:id/gate succeeds with reviewer token
+    ✓ POST /api/disputes/batch-gate rejects unauthenticated requests with 401
+    ✓ POST /api/disputes/batch-gate succeeds with reviewer token
     ✓ POST /api/disputes/:id/review rejects unauthenticated requests with 401
     ✓ POST /api/disputes/:id/review accepts authenticated reviewer action and writes audit log
-    ✓ GET /api/metrics returns held-out metrics report and sensitivity curve
-    ✓ POST /api/simulate performs interactive real-time scoring and drafting
+    ✓ GET /api/metrics returns held-out metrics report and sensitivity curve (Public)
+    ✓ POST /api/metrics/evaluate rejects unauthenticated requests with 401
+    ✓ POST /api/metrics/evaluate succeeds with reviewer token
+    ✓ POST /api/simulate is intentionally public for interactive judge sandbox evaluation
 ```
