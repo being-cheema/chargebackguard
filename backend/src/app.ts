@@ -8,37 +8,39 @@ import { disputeRouter } from './routes/disputeRoutes';
 import { auditRouter } from './routes/auditRoutes';
 import { metricsRouter } from './routes/metricsRoutes';
 import { simulateRouter } from './routes/simulateRoutes';
+import { webhookRouter } from './routes/webhookRoutes';
+import { razorpayRouter } from './routes/razorpayRoutes';
 import { getDb } from './db';
+import { getDecisionGateThreshold } from './config/settings';
 
 dotenv.config();
 
 export const app = express();
 
-// 1. Security Headers via Helmet
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Allows flexible API usage
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   })
 );
 
-// 2. CORS configuration
 app.use(
   cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Razorpay-Signature'],
   })
 );
 
-// 3. Body parsers with bounded payload limit (prevents memory exhaustion)
+// Razorpay webhooks need raw body for signature verification
+app.use('/api/webhooks/razorpay', express.raw({ type: 'application/json', limit: '1mb' }));
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// 4. Rate Limiter (Defense-in-depth against DoS and brute force)
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // max 300 requests per window per IP
+  windowMs: 15 * 60 * 1000,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -49,35 +51,38 @@ const globalLimiter = rateLimit({
 
 app.use('/api', globalLimiter);
 
-// 5. Health Check Endpoint
 app.get('/health', async (req: Request, res: Response) => {
   try {
     const db = await getDb();
     const result = await db.query('SELECT COUNT(*) as count FROM disputes');
+    const payments = await db.query(`SELECT COUNT(*) as count FROM payments`);
     res.json({
       status: 'healthy',
       service: 'ChargebackGuard Backend',
       environment: process.env.NODE_ENV || 'development',
       database: db.isPGlite ? 'Embedded PGlite (PostgreSQL WASM)' : 'External PostgreSQL',
       totalDisputesInDb: Number(result.rows[0]?.count || 0),
+      totalPaymentsInDb: Number(payments.rows[0]?.count || 0),
+      decisionGateThreshold: getDecisionGateThreshold(),
       timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
     res.status(503).json({
       status: 'unhealthy',
-      error: err.message,
+      error: message,
     });
   }
 });
 
-// 6. API Route mounting
 app.use('/api/auth', authRouter);
 app.use('/api/disputes', disputeRouter);
 app.use('/api/audit', auditRouter);
 app.use('/api/metrics', metricsRouter);
 app.use('/api/simulate', simulateRouter);
+app.use('/api/webhooks', webhookRouter);
+app.use('/api/razorpay', razorpayRouter);
 
-// 7. 404 Route Handler
 app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: 'Not Found',
@@ -85,11 +90,11 @@ app.use((req: Request, res: Response) => {
   });
 });
 
-// 8. Centralized Error Handler
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: unknown, req: Request, res: Response, next: NextFunction) => {
   console.error('Unhandled server error:', err);
-  res.status(err.status || 500).json({
-    error: err.name || 'Internal Server Error',
-    message: err.message || 'An unexpected error occurred.',
+  const e = err as { status?: number; name?: string; message?: string };
+  res.status(e.status || 500).json({
+    error: e.name || 'Internal Server Error',
+    message: e.message || 'An unexpected error occurred.',
   });
 });

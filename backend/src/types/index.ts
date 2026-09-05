@@ -78,10 +78,20 @@ export interface ScoreResult {
   };
 }
 
+export type AuditAction =
+  | 'SCORED'
+  | 'DRAFTED'
+  | 'DRAFT_REJECTED_HALLUCINATION'
+  | 'DECISION_GATED'
+  | 'HUMAN_APPROVED'
+  | 'HUMAN_OVERRIDDEN'
+  | 'RAZORPAY_DRAFTED'
+  | 'RAZORPAY_SUBMITTED';
+
 export interface AuditLogRecord {
   id: string;
   dispute_id: string;
-  action: 'SCORED' | 'DRAFTED' | 'DECISION_GATED' | 'HUMAN_APPROVED' | 'HUMAN_OVERRIDDEN';
+  action: AuditAction;
   score: number | null;
   decision: string;
   threshold_used: number;

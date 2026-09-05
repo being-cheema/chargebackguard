@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { REASON_CODE_REGISTRY } from '../config/reasonCodes';
 import { calculateDisputeScore } from '../scoring/engine';
+import { getDecisionGateThreshold } from '../config/settings';
 import { draftExplanationLetter } from '../drafting/drafter';
 import { DisputeRecord } from '../types';
 import { validateBody, simulateDisputeSchema } from '../middleware/validation';
@@ -28,7 +29,7 @@ simulateRouter.post(
         ip_matches_billing_country,
         merchant_response_time_hours,
         evidence,
-        threshold = 0.75,
+        threshold = getDecisionGateThreshold(),
       } = req.body;
 
       const now = Math.floor(Date.now() / 1000);

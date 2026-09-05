@@ -1,113 +1,94 @@
 import React from 'react';
-import { ShieldCheck, BarChart3, Sliders, ScrollText, UserCheck, LogIn, LogOut } from 'lucide-react';
+import { ShieldCheck, BarChart3, Sliders, ScrollText, UserCheck, LogIn, LogOut, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+export type NavTab = 'queue' | 'metrics' | 'simulator' | 'audit' | 'integration';
+
 interface NavbarProps {
-  activeTab: 'queue' | 'metrics' | 'simulator' | 'audit';
-  setActiveTab: (tab: 'queue' | 'metrics' | 'simulator' | 'audit') => void;
+  activeTab: NavTab;
+  setActiveTab: (tab: NavTab) => void;
   onOpenLogin: () => void;
 }
+
+const TABS: Array<{ id: NavTab; label: string; icon: React.ElementType }> = [
+  { id: 'queue', label: 'Disputes', icon: ShieldCheck },
+  { id: 'metrics', label: 'Metrics', icon: BarChart3 },
+  { id: 'simulator', label: 'Simulator', icon: Sliders },
+  { id: 'audit', label: 'Audit Log', icon: ScrollText },
+  { id: 'integration', label: 'Razorpay', icon: Zap },
+];
 
 export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenLogin }) => {
   const { reviewer, isAuthenticated, logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-hairline">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 gap-4">
           {/* Brand / Logo */}
-          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('queue')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <ShieldCheck className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="font-bold text-lg text-white tracking-tight">ChargebackGuard</span>
-                <span className="text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                  Razorpay Risk AI
-                </span>
+          <div
+            className="flex items-center space-x-2.5 cursor-pointer shrink-0"
+            onClick={() => setActiveTab('queue')}
+          >
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-ink">
+              <ShieldCheck className="w-4 h-4 text-white" />
+            </span>
+            <div className="hidden sm:block">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-[15px] text-ink tracking-tight">ChargebackGuard</span>
               </div>
-              <p className="text-xs text-slate-400">Track 02: AI Risk Manager</p>
+              <p className="text-[11px] text-ink-tertiary -mt-0.5">Track 02 &middot; AI Risk Manager</p>
             </div>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="flex items-center space-x-1 sm:space-x-2">
-            <button
-              onClick={() => setActiveTab('queue')}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'queue'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Disputes Queue</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('metrics')}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'metrics'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Held-Out Metrics</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('simulator')}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'simulator'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <Sliders className="w-4 h-4" />
-              <span>Sandbox Simulator</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('audit')}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === 'audit'
-                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-              }`}
-            >
-              <ScrollText className="w-4 h-4" />
-              <span>Audit Log</span>
-            </button>
+          {/* Navigation — segmented control */}
+          <nav className="flex items-center gap-0.5 bg-surface rounded-full p-1 overflow-x-auto">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'bg-white text-ink shadow-card'
+                      : 'text-ink-secondary hover:text-ink'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">{tab.label}</span>
+                </button>
+              );
+            })}
           </nav>
 
           {/* Reviewer Auth Section */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center shrink-0">
             {isAuthenticated && reviewer ? (
-              <div className="flex items-center space-x-3 bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-lg">
-                <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-                  <UserCheck className="w-4 h-4" />
-                </div>
-                <div className="hidden md:block text-left">
-                  <div className="text-xs font-semibold text-slate-200">{reviewer.name}</div>
-                  <div className="text-[10px] text-slate-400">{reviewer.role}</div>
+              <div className="flex items-center gap-2.5 border border-hairline pl-1 pr-2 py-1 rounded-full">
+                <span className="w-6 h-6 rounded-full bg-surface text-ink-secondary flex items-center justify-center">
+                  <UserCheck className="w-3.5 h-3.5" />
+                </span>
+                <div className="hidden md:block text-left leading-tight">
+                  <div className="text-[12px] font-medium text-ink">{reviewer.name}</div>
+                  <div className="text-[10px] text-ink-tertiary">{reviewer.role}</div>
                 </div>
                 <button
                   onClick={logout}
                   title="Log out"
-                  className="text-slate-400 hover:text-rose-400 transition-colors p-1"
+                  className="text-ink-tertiary hover:text-ink transition-colors p-1"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
               <button
                 onClick={onOpenLogin}
-                className="flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-500 hover:to-indigo-500 transition-all shadow-md shadow-blue-500/20 border border-blue-400/30"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[13px] font-medium bg-ink text-white hover:bg-black transition-colors"
               >
                 <LogIn className="w-3.5 h-3.5" />
-                <span>Reviewer Login</span>
+                <span className="hidden sm:inline">Reviewer Login</span>
               </button>
             )}
           </div>

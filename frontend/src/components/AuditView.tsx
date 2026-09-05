@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollText, RefreshCw, UserCheck, Sparkles, AlertTriangle } from 'lucide-react';
+import { ScrollText, RefreshCw, UserCheck, FileText, AlertTriangle } from 'lucide-react';
 import type { AuditLogRecord } from '../types';
 import { api } from '../services/api';
 
@@ -33,40 +33,40 @@ export const AuditView: React.FC = () => {
     switch (action) {
       case 'DECISION_GATED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">
-            <Sparkles className="w-3 h-3 mr-1" />
+          <span className="inline-flex items-center bg-surface text-ink-secondary rounded-full px-2.5 py-1 text-[12px] font-medium">
+            <FileText className="w-3 h-3 mr-1" />
             DECISION_GATED
           </span>
         );
       case 'HUMAN_APPROVED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+          <span className="inline-flex items-center bg-emerald-50 text-emerald-700 rounded-full px-2.5 py-1 text-[12px] font-medium">
             <UserCheck className="w-3 h-3 mr-1" />
             HUMAN_APPROVED
           </span>
         );
       case 'HUMAN_OVERRIDDEN':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+          <span className="inline-flex items-center bg-red-50 text-red-600 rounded-full px-2.5 py-1 text-[12px] font-medium">
             <AlertTriangle className="w-3 h-3 mr-1" />
             HUMAN_OVERRIDDEN
           </span>
         );
       case 'SCORED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+          <span className="inline-flex items-center bg-surface text-ink-secondary rounded-full px-2.5 py-1 text-[12px] font-medium">
             SCORED
           </span>
         );
       case 'DRAFTED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30">
+          <span className="inline-flex items-center bg-surface text-ink-secondary rounded-full px-2.5 py-1 text-[12px] font-medium">
             DRAFTED
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+          <span className="inline-flex items-center bg-surface text-ink-secondary rounded-full px-2.5 py-1 text-[12px] font-medium">
             {action}
           </span>
         );
@@ -76,17 +76,17 @@ export const AuditView: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 rounded-2xl bg-white border border-hairline shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center space-x-2">
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+          <div className="flex items-center space-x-3">
+            <div className="text-ink-secondary">
               <ScrollText className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">
+              <h2 className="text-xl font-semibold text-ink tracking-tight">
                 System-Wide Immutable Audit Trail
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-[13px] text-ink-secondary">
                 Append-only log of every score, draft, decision gate, and human reviewer action.
               </p>
             </div>
@@ -97,7 +97,7 @@ export const AuditView: React.FC = () => {
           <select
             value={filterAction}
             onChange={(e) => setFilterAction(e.target.value)}
-            className="px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+            className="px-3 py-2 bg-surface border border-hairline rounded-lg text-[13px] text-ink focus:outline-none focus:border-ink"
           >
             <option value="all">All Actions ({logs.length})</option>
             <option value="DECISION_GATED">DECISION_GATED</option>
@@ -110,38 +110,38 @@ export const AuditView: React.FC = () => {
           <button
             onClick={fetchLogs}
             disabled={loading}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors"
+            className="bg-white border border-hairline hover:bg-surface text-ink rounded-full px-4 py-2 text-[13px] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-ink-tertiary ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
       {/* Audit Log Stream Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+      <div className="bg-white border border-hairline rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
+          <table className="w-full text-left text-[14px] border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-950 text-[11px] font-bold uppercase text-slate-400">
-                <th className="py-3.5 px-4">Timestamp</th>
-                <th className="py-3.5 px-4">Action</th>
-                <th className="py-3.5 px-4">Dispute ID</th>
-                <th className="py-3.5 px-4">Score</th>
-                <th className="py-3.5 px-4">Decision & Reviewer Notes</th>
-                <th className="py-3.5 px-4 text-right">Audit ID</th>
+              <tr className="text-ink-tertiary text-[12px] border-b border-hairline">
+                <th className="font-medium px-6 py-3 text-left">Timestamp</th>
+                <th className="font-medium px-6 py-3 text-left">Action</th>
+                <th className="font-medium px-6 py-3 text-left">Dispute ID</th>
+                <th className="font-medium px-6 py-3 text-left">Score</th>
+                <th className="font-medium px-6 py-3 text-left">Decision & Reviewer Notes</th>
+                <th className="font-medium px-6 py-3 text-right">Audit ID</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
-                    <RefreshCw className="w-6 h-6 animate-spin mx-auto text-blue-500 mb-2" />
+                  <td colSpan={6} className="py-12 text-center text-ink-tertiary">
+                    <RefreshCw className="w-5 h-5 animate-spin mx-auto text-ink-tertiary mb-2" />
                     Loading audit stream...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                  <td colSpan={6} className="py-12 text-center text-ink-tertiary">
                     No audit records matching the action filter.
                   </td>
                 </tr>
@@ -149,36 +149,36 @@ export const AuditView: React.FC = () => {
                 filteredLogs.map((log) => {
                   const dateStr = new Date(log.created_at * 1000).toLocaleString('en-IN');
                   return (
-                    <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-3 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                    <tr key={log.id} className="border-b border-hairline last:border-0 hover:bg-surface/60 transition-colors">
+                      <td className="px-6 py-3 font-mono text-[12px] text-ink-secondary whitespace-nowrap">
                         {dateStr}
                       </td>
-                      <td className="py-3 px-4">{getActionBadge(log.action)}</td>
-                      <td className="py-3 px-4 font-mono font-semibold text-slate-200">
+                      <td className="px-6 py-3">{getActionBadge(log.action)}</td>
+                      <td className="px-6 py-3 font-mono text-[12px] text-ink-secondary">
                         {log.dispute_id}
                       </td>
-                      <td className="py-3 px-4 font-mono">
+                      <td className="px-6 py-3 font-mono text-[14px]">
                         {log.score !== null ? (
                           <span
-                            className={`font-bold ${
-                              log.score >= 0.75 ? 'text-emerald-400' : 'text-amber-400'
+                            className={`font-semibold ${
+                              log.score >= 0.75 ? 'text-emerald-700' : 'text-amber-700'
                             }`}
                           >
                             {(log.score * 100).toFixed(0)}%
                           </span>
                         ) : (
-                          <span className="text-slate-600">—</span>
+                          <span className="text-ink-tertiary">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 max-w-md">
-                        <div className="text-slate-200 font-medium truncate">{log.decision}</div>
+                      <td className="px-6 py-3 max-w-md">
+                        <div className="text-ink font-medium truncate">{log.decision}</div>
                         {log.reviewer_notes && (
-                          <div className="text-[11px] text-slate-400 truncate mt-0.5 italic">
+                          <div className="text-[12px] text-ink-tertiary truncate mt-0.5 italic">
                             {log.reviewer_notes}
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-4 font-mono text-[10px] text-slate-600 text-right">
+                      <td className="px-6 py-3 font-mono text-[12px] text-ink-tertiary text-right">
                         {log.id}
                       </td>
                     </tr>

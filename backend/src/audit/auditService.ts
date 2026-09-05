@@ -1,10 +1,10 @@
 import crypto from 'crypto';
 import { getDb } from '../db';
-import { AuditLogRecord } from '../types';
+import { AuditAction, AuditLogRecord } from '../types';
 
 export async function createAuditLogEntry(entry: {
   dispute_id: string;
-  action: 'SCORED' | 'DRAFTED' | 'DECISION_GATED' | 'HUMAN_APPROVED' | 'HUMAN_OVERRIDDEN';
+  action: AuditAction;
   score: number | null;
   decision: string;
   threshold_used: number;

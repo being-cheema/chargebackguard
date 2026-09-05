@@ -324,7 +324,8 @@ ${Object.entries(results.reason_code_performance)
 `;
 }
 
-export function runEvaluation(): MetricEvaluationResult {
+export function runEvaluation(options: { writeArtifacts?: boolean } = {}): MetricEvaluationResult {
+  const writeArtifacts = options.writeArtifacts ?? !process.env.JEST_WORKER_ID;
   const dataDir = path.resolve(__dirname, '../../../data');
   const datasetPath = path.join(dataDir, 'synthetic_disputes.json');
 
@@ -337,16 +338,18 @@ export function runEvaluation(): MetricEvaluationResult {
 
   const results = evaluateHeldOutSet(disputes, 0.75);
 
-  // Write JSON report
-  const jsonReportPath = path.join(dataDir, 'metrics_report.json');
-  fs.writeFileSync(jsonReportPath, JSON.stringify(results, null, 2), 'utf-8');
-  console.log(`📊 Metrics JSON saved to: ${jsonReportPath}`);
+  if (writeArtifacts) {
+    // Write JSON report
+    const jsonReportPath = path.join(dataDir, 'metrics_report.json');
+    fs.writeFileSync(jsonReportPath, JSON.stringify(results, null, 2), 'utf-8');
+    console.log(`📊 Metrics JSON saved to: ${jsonReportPath}`);
 
-  // Write Markdown report in project root
-  const mdReport = generateMarkdownReport(results);
-  const rootReportPath = path.resolve(__dirname, '../../../METRICS_REPORT.md');
-  fs.writeFileSync(rootReportPath, mdReport, 'utf-8');
-  console.log(`📄 Metrics Markdown report saved to: ${rootReportPath}`);
+    // Write Markdown report in project root
+    const mdReport = generateMarkdownReport(results);
+    const rootReportPath = path.resolve(__dirname, '../../../METRICS_REPORT.md');
+    fs.writeFileSync(rootReportPath, mdReport, 'utf-8');
+    console.log(`📄 Metrics Markdown report saved to: ${rootReportPath}`);
+  }
 
   return results;
 }

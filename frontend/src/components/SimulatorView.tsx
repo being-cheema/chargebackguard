@@ -103,16 +103,16 @@ export const SimulatorView: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header Banner */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-cyan-950/60 border border-slate-800 shadow-xl">
-        <div className="flex items-center space-x-2.5">
-          <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+      <div className="p-6 rounded-2xl bg-white border border-hairline shadow-card">
+        <div className="flex items-center space-x-3">
+          <div className="text-ink-secondary">
             <Sliders className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white tracking-tight">
+            <h2 className="text-xl font-semibold text-ink tracking-tight">
               Interactive Dispute Risk & Evidence Sandbox
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-[13px] text-ink-secondary">
               Live deterministic scorer and anti-hallucination letter drafter testbed.
             </p>
           </div>
@@ -121,18 +121,18 @@ export const SimulatorView: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left Parameter Panel (5 cols) */}
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5 shadow-xl">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+        <div className="lg:col-span-5 bg-white border border-hairline rounded-2xl p-6 space-y-5 shadow-card">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-tertiary">
             1. Dispute Case Parameters
           </h3>
 
           {/* Reason Code */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Razorpay Reason Code</label>
+            <label className="block text-[13px] font-medium text-ink-secondary mb-1">Razorpay Reason Code</label>
             <select
               value={selectedReasonCode}
               onChange={(e) => setSelectedReasonCode(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 bg-surface border border-hairline rounded-lg text-[13px] text-ink focus:outline-none focus:border-ink"
             >
               {reasonCodes.map((r) => (
                 <option key={r.code} value={r.code}>
@@ -141,26 +141,26 @@ export const SimulatorView: React.FC = () => {
               ))}
             </select>
             {selectedConfig && (
-              <p className="text-[11px] text-slate-400 mt-1">{selectedConfig.description}</p>
+              <p className="text-[12px] text-ink-tertiary mt-1">{selectedConfig.description}</p>
             )}
           </div>
 
           {/* Amount & Days since transaction */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Amount (INR ₹)</label>
+              <label className="block text-[13px] font-medium text-ink-secondary mb-1">Amount (INR ₹)</label>
               <input
                 type="number"
                 min={100}
                 max={200000}
                 value={amountInr}
                 onChange={(e) => setAmountInr(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 bg-surface border border-hairline rounded-lg text-[13px] text-ink focus:outline-none focus:border-ink"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Days Since Tx: <span className="text-blue-400 font-mono font-bold">{daysSinceTx}d</span>
+              <label className="block text-[13px] font-medium text-ink-secondary mb-1">
+                Days Since Tx: <span className="text-ink font-mono font-semibold">{daysSinceTx}d</span>
               </label>
               <input
                 type="range"
@@ -168,7 +168,7 @@ export const SimulatorView: React.FC = () => {
                 max={90}
                 value={daysSinceTx}
                 onChange={(e) => setDaysSinceTx(Number(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500 mt-2"
+                className="w-full h-2 bg-surface border border-hairline rounded-lg appearance-none cursor-pointer accent-ink mt-2"
               />
             </div>
           </div>
@@ -176,8 +176,8 @@ export const SimulatorView: React.FC = () => {
           {/* Customer History & Response Time */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Dispute History: <span className="text-blue-400 font-mono font-bold">{disputeHistory}</span>
+              <label className="block text-[13px] font-medium text-ink-secondary mb-1">
+                Dispute History: <span className="text-ink font-mono font-semibold">{disputeHistory}</span>
               </label>
               <input
                 type="range"
@@ -185,12 +185,12 @@ export const SimulatorView: React.FC = () => {
                 max={6}
                 value={disputeHistory}
                 onChange={(e) => setDisputeHistory(Number(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500 mt-2"
+                className="w-full h-2 bg-surface border border-hairline rounded-lg appearance-none cursor-pointer accent-ink mt-2"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Response Time: <span className="text-blue-400 font-mono font-bold">{responseTimeHours}h</span>
+              <label className="block text-[13px] font-medium text-ink-secondary mb-1">
+                Response Time: <span className="text-ink font-mono font-semibold">{responseTimeHours}h</span>
               </label>
               <input
                 type="range"
@@ -198,24 +198,24 @@ export const SimulatorView: React.FC = () => {
                 max={96}
                 value={responseTimeHours}
                 onChange={(e) => setResponseTimeHours(Number(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500 mt-2"
+                className="w-full h-2 bg-surface border border-hairline rounded-lg appearance-none cursor-pointer accent-ink mt-2"
               />
             </div>
           </div>
 
           {/* IP Match & Decision Gate Threshold */}
-          <div className="pt-2 border-t border-slate-800/80 space-y-3">
+          <div className="pt-2 border-t border-hairline space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">Transaction IP matches Billing Country</span>
+              <span className="text-[13px] font-medium text-ink-secondary">Transaction IP matches Billing Country</span>
               <button
                 type="button"
                 onClick={() => setIpMatch(!ipMatch)}
                 className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors ${
-                  ipMatch ? 'bg-blue-600' : 'bg-slate-700'
+                  ipMatch ? 'bg-ink' : 'bg-surface border border-hairline'
                 }`}
               >
                 <div
-                  className={`bg-white w-3.5 h-3.5 rounded-full shadow-md transform transition-transform ${
+                  className={`bg-white w-3.5 h-3.5 rounded-full shadow-card transform transition-transform ${
                     ipMatch ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
@@ -223,9 +223,9 @@ export const SimulatorView: React.FC = () => {
             </div>
 
             <div>
-              <div className="flex justify-between text-xs font-semibold text-slate-300 mb-1">
+              <div className="flex justify-between text-[13px] font-medium text-ink-secondary mb-1">
                 <span>Decision Threshold</span>
-                <span className="text-blue-400 font-mono">{threshold.toFixed(2)}</span>
+                <span className="text-ink font-mono">{threshold.toFixed(2)}</span>
               </div>
               <input
                 type="range"
@@ -234,14 +234,14 @@ export const SimulatorView: React.FC = () => {
                 step={0.05}
                 value={threshold}
                 onChange={(e) => setThreshold(parseFloat(e.target.value))}
-                className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                className="w-full h-2 bg-surface border border-hairline rounded-lg appearance-none cursor-pointer accent-ink"
               />
             </div>
           </div>
 
           {/* Evidence Checklist Toggle Matrix */}
-          <div className="pt-2 border-t border-slate-800/80 space-y-2.5">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+          <div className="pt-2 border-t border-hairline space-y-2.5">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-ink-tertiary">
               2. Available Evidence Files
             </h4>
             <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
@@ -253,27 +253,27 @@ export const SimulatorView: React.FC = () => {
                   <div
                     key={key}
                     onClick={() => toggleEvidence(key)}
-                    className={`p-2.5 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
+                    className={`px-4 py-3 rounded-xl border flex items-center justify-between cursor-pointer transition-colors ${
                       isChecked
-                        ? 'bg-blue-950/40 border-blue-500/40 text-slate-200'
-                        : 'bg-slate-950/40 border-slate-800/80 text-slate-400 hover:border-slate-700'
+                        ? 'bg-white border-hairline text-ink'
+                        : 'bg-surface border-hairline text-ink-tertiary hover:border-ink-tertiary'
                     }`}
                   >
-                    <div className="flex items-center space-x-2 truncate">
+                    <div className="flex items-center space-x-2.5 truncate">
                       <div
                         className={`w-4 h-4 rounded flex items-center justify-center border ${
                           isChecked
-                            ? 'bg-blue-600 border-blue-500 text-white'
-                            : 'border-slate-700 bg-slate-900'
+                            ? 'bg-ink border-ink text-white'
+                            : 'border-hairline bg-white'
                         }`}
                       >
                         {isChecked && <CheckCircle2 className="w-3 h-3" />}
                       </div>
-                      <span className="text-xs font-medium truncate">{label}</span>
+                      <span className="text-[13px] font-medium truncate">{label}</span>
                     </div>
 
                     {isPrimary && (
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <span className="text-[11px] font-medium px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700">
                         Primary
                       </span>
                     )}
@@ -289,26 +289,26 @@ export const SimulatorView: React.FC = () => {
           {simulationResult && (
             <>
               {/* Score Gauge Output */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+              <div className="bg-white border border-hairline rounded-2xl p-6 shadow-card space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-tertiary">
                     Live Deterministic Score Engine Result
                   </h3>
-                  <span className="text-[11px] text-slate-500 italic">No LLM in scoring logic</span>
+                  <span className="text-[12px] text-ink-tertiary italic">No LLM in scoring logic</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800">
-                    <div className="text-xs text-slate-400">Calculated Win Probability</div>
-                    <div className="text-3xl font-extrabold font-mono text-white mt-1">
+                  <div className="bg-surface p-4 rounded-xl border border-hairline">
+                    <div className="text-[13px] text-ink-secondary">Calculated Win Probability</div>
+                    <div className="text-[32px] font-semibold tracking-tight font-mono text-ink mt-1">
                       {(simulationResult.scoreResult.score * 100).toFixed(0)}%
                     </div>
-                    <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden mt-3">
+                    <div className="w-full bg-hairline rounded-full h-1.5 overflow-hidden mt-3">
                       <div
                         className={`h-full rounded-full ${
                           simulationResult.scoreResult.score >= threshold
-                            ? 'bg-emerald-400'
-                            : 'bg-amber-400'
+                            ? 'bg-emerald-500'
+                            : 'bg-amber-500'
                         }`}
                         style={{
                           width: `${Math.min(
@@ -320,24 +320,24 @@ export const SimulatorView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
-                    <div className="text-xs text-slate-400">Gate Routing Output</div>
+                  <div className="bg-surface p-4 rounded-xl border border-hairline flex flex-col justify-between">
+                    <div className="text-[13px] text-ink-secondary">Gate Routing Output</div>
                     <div className="my-1">
                       {simulationResult.isAutoSubmitted ? (
-                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                          <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                        <span className="inline-flex items-center bg-emerald-50 text-emerald-700 rounded-full px-3 py-1 text-[13px] font-medium">
+                          <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                           AUTO-APPROVED (≥ {threshold.toFixed(2)})
                         </span>
                       ) : (
-                        <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                          <AlertTriangle className="w-4 h-4 mr-1.5" />
+                        <span className="inline-flex items-center bg-amber-50 text-amber-700 rounded-full px-3 py-1 text-[13px] font-medium">
+                          <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
                           ROUTED TO HUMAN REVIEW (&lt; {threshold.toFixed(2)})
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-[12px] text-ink-tertiary">
                       Evidence completeness:{' '}
-                      <span className="font-mono text-slate-300">
+                      <span className="font-mono text-ink-secondary">
                         {(simulationResult.scoreResult.evidenceCompleteness * 100).toFixed(0)}%
                       </span>
                     </div>
@@ -346,26 +346,26 @@ export const SimulatorView: React.FC = () => {
 
                 {/* Factors Attribution */}
                 <div className="space-y-2 pt-2">
-                  <div className="text-xs font-bold text-slate-300">Mathematical Factor Attribution:</div>
+                  <div className="text-[13px] font-medium text-ink-secondary">Mathematical Factor Attribution:</div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/20 text-xs text-slate-300 space-y-1">
-                      <div className="font-bold text-emerald-400">Positive Factors:</div>
+                    <div className="p-3 rounded-xl bg-emerald-50 text-[13px] text-ink-secondary space-y-1">
+                      <div className="font-medium text-emerald-700">Positive Factors:</div>
                       {simulationResult.scoreResult.factors.positive.map((f: string, i: number) => (
                         <div key={i} className="flex items-start space-x-1">
-                          <span className="text-emerald-400 font-bold">•</span>
+                          <span className="text-emerald-700 font-medium">•</span>
                           <span>{f}</span>
                         </div>
                       ))}
                     </div>
 
-                    <div className="p-3 rounded-lg bg-rose-950/20 border border-rose-500/20 text-xs text-slate-300 space-y-1">
-                      <div className="font-bold text-rose-400">Negative Penalties:</div>
+                    <div className="p-3 rounded-xl bg-red-50 text-[13px] text-ink-secondary space-y-1">
+                      <div className="font-medium text-red-600">Negative Penalties:</div>
                       {simulationResult.scoreResult.factors.negative.length === 0 ? (
-                        <div className="text-slate-500 italic">No penalties applied.</div>
+                        <div className="text-ink-tertiary italic">No penalties applied.</div>
                       ) : (
                         simulationResult.scoreResult.factors.negative.map((f: string, i: number) => (
                           <div key={i} className="flex items-start space-x-1">
-                            <span className="text-rose-400 font-bold">•</span>
+                            <span className="text-red-600 font-medium">•</span>
                             <span>{f}</span>
                           </div>
                         ))
@@ -376,25 +376,25 @@ export const SimulatorView: React.FC = () => {
               </div>
 
               {/* Dynamic Drafted Explanation Letter Output */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-3">
+              <div className="bg-white border border-hairline rounded-2xl p-6 shadow-card space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-tertiary">
                     Generated Natural-Language Explanation Letter
                   </h3>
-                  <span className="text-[11px] text-slate-400 font-mono">
+                  <span className="text-[12px] text-ink-tertiary font-mono">
                     {simulationResult.draftResult.characterCount} / 1000 chars
                   </span>
                 </div>
 
                 {/* Anti-Hallucination verification pill */}
-                <div className="flex items-center space-x-2 text-xs text-emerald-400 font-semibold bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-                  <ShieldCheck className="w-4 h-4" />
+                <div className="flex items-center space-x-2 text-[13px] text-ink-secondary font-medium bg-surface p-2.5 rounded-lg border border-hairline">
+                  <ShieldCheck className="w-4 h-4 text-ink-tertiary" />
                   <span>
                     Anti-Hallucination Guard: Validated against active evidence matrix (Zero unverified claims).
                   </span>
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 leading-relaxed">
+                <div className="bg-surface rounded-xl p-4 text-[14px] text-ink-secondary leading-relaxed">
                   {simulationResult.draftResult.letter}
                 </div>
               </div>

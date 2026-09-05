@@ -1,7 +1,7 @@
 # ChargebackGuard — AI-Assisted Chargeback Evidence Responder
 
-> **Submission for the Razorpay AI Buildathon**  
-> **Track 02: AI Risk Manager**  
+> **Submission for the Razorpay AI Buildathon**
+> **Track 02: AI Risk Manager**
 > **Defense-Only System** | **100% Deterministic Scoring** | **Anti-Hallucination LLM Drafting** | **Immutable Audit Trail**
 
 ---
@@ -63,7 +63,7 @@ flowchart TD
 
 ## 3. Honest Held-Out Test Set Metrics & Trade-Off Philosophy
 
-The scoring engine was evaluated strictly against the fixed **held-out 30% split (135 disputes)** from `data/split_manifest.json` (SHA256: `83c44b5659ca2e7ad455d4214ec970ce4573e5a00110a0251204732c3193cad6`).
+The scoring engine was evaluated strictly against the fixed **held-out 30% split (135 disputes)** from `data/split_manifest.json` (SHA256: `ec48fb0a686e0f2a5df74bf1221662f0b1be6f4356cb477941720bc93615dcfe`).
 
 ### The Precision / Recall Design Principle
 > *"We tuned for high precision over high recall because a wrongly auto-contested dispute carries reputational and card-network penalty risk beyond its dollar cost, while a missed win still gets a second chance via human review."*
@@ -179,6 +179,44 @@ Matches Razorpay's real Disputes API schema:
 
 ---
 
+## 5b. Razorpay API Integration
+
+ChargebackGuard integrates with Razorpay's real Disputes, Documents, and Webhooks APIs:
+
+| Feature | Endpoint | Auth |
+|---------|----------|------|
+| Webhook ingestion | `POST /api/webhooks/razorpay` | Razorpay HMAC signature |
+| Demo dispute simulator | `POST /api/webhooks/simulate` | Reviewer JWT |
+| Live dispute sync | `POST /api/razorpay/sync` | Reviewer JWT + API keys |
+| Contest draft/submit | `POST /api/razorpay/disputes/:id/contest` | Reviewer JWT + API keys |
+| Real payments view | `GET /api/razorpay/payments` | Public |
+
+**Note:** Razorpay test mode cannot create disputes (banks initiate them). Use the **Razorpay Integration** tab in the UI to simulate `payment.dispute.created` webhooks for demo purposes.
+
+Set in `backend/.env`:
+```
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+RAZORPAY_WEBHOOK_SECRET=...
+RAZORPAY_CONTEST_MODE=draft
+```
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full data flow.
+
+---
+
+## 5c. Evaluation Methodology & Honest Limitations
+
+> **We disclose limitations upfront because honest metrics are a buildathon requirement.**
+
+- **Labels are synthetic** — `ground_truth_outcome` is generated from domain rules + 12% noise in `generator.ts`, not from real Razorpay dispute outcomes.
+- **The scorer and label generator share design philosophy** (similar evidence/timing weights) but are not identical functions.
+- **Reported precision/recall measure routing quality on synthetic data**, not production win rates on live chargebacks.
+- **False-positive cost (₹4,000)** is an explicit assumption: ₹1,500 ops review + ₹2,500 network penalty risk.
+- **Held-out 30% was never used for weight tuning** — verify with `npm run evaluate:integrity`.
+
+---
+
 ## 6. How to Run Locally
 
 ### Prerequisites
@@ -187,14 +225,20 @@ Matches Razorpay's real Disputes API schema:
 
 ### Option A: Local Development (Instant Zero-Friction Setup)
 
-1. **Install Backend & Seed Database**:
+1. **Install & Seed** (from repo root or backend):
    ```bash
    cd backend
    npm install
-   npm run seed        # Seeds 450 disputes & saves split_manifest.json
-   npm run evaluate    # Evaluates held-out 30% test set
-   npm test            # Runs all 36 Jest unit & integration tests
-   npm run dev         # Starts backend API on http://localhost:5050
+   npm run seed -- --payments   # 450 disputes + 9 real test payments
+   npm run evaluate             # Held-out metrics report
+   npm run evaluate:integrity   # Verify dataset SHA256
+   npm test                     # 42 Jest tests
+   npm run dev                  # Backend on http://localhost:5050
+   ```
+
+   Or from repo root (after `npm install` in root, backend, frontend):
+   ```bash
+   npm run dev                  # Starts backend :5050 + frontend :5180
    ```
 
 2. **Install & Start Frontend**:
@@ -243,7 +287,7 @@ During the development and testing of ChargebackGuard, we encountered three real
 
 ## 8. Verification & Test Coverage
 
-All 36 unit and integration test cases pass cleanly:
+All 42 unit and integration test cases pass cleanly:
 
 ```bash
 PASS tests/scoring.test.ts
@@ -293,4 +337,13 @@ PASS tests/api.test.ts
     ✓ POST /api/metrics/evaluate rejects unauthenticated requests with 401
     ✓ POST /api/metrics/evaluate succeeds with reviewer token
     ✓ POST /api/simulate is intentionally public for interactive judge sandbox evaluation
+    ✓ POST /api/webhooks/simulate ingests a dispute (JWT)
+    ✓ GET /api/razorpay/status returns integration status
+    ✓ GET /api/razorpay/payments returns payment list
+
+PASS tests/razorpay.test.ts
+  Razorpay Webhook Utilities
+    ✓ sign and verify webhook payload round-trip
+    ✓ buildSimulatedDisputeWebhookPayload creates valid structure
+    ✓ mapRazorpayDisputeToRecord maps entity to internal schema
 ```

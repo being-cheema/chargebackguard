@@ -14,6 +14,10 @@ export interface DatabaseInterface {
 
 let dbInstance: DatabaseInterface | null = null;
 
+export function resetDbForTests(): void {
+  dbInstance = null;
+}
+
 export async function getDb(): Promise<DatabaseInterface> {
   if (dbInstance) {
     return dbInstance;
@@ -45,8 +49,9 @@ export async function getDb(): Promise<DatabaseInterface> {
     }
   }
 
-  // Use embedded PGlite database
-  const dataDir = path.resolve(__dirname, '../../data/pglite_db');
+  // Use embedded PGlite database (PGLITE_DATA_DIR overrides for isolated test runs)
+  const dataDir =
+    process.env.PGLITE_DATA_DIR || path.resolve(__dirname, '../../data/pglite_db');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
@@ -142,10 +147,40 @@ export async function initSchema(db: DatabaseInterface): Promise<void> {
     // ignore if already updated
   }
 
+  // Razorpay integration columns
+  const alterColumns = [
+    `ALTER TABLE disputes ADD COLUMN IF NOT EXISTS label_source VARCHAR(32) DEFAULT 'synthetic'`,
+    `ALTER TABLE disputes ADD COLUMN IF NOT EXISTS ingestion_source VARCHAR(32)`,
+    `ALTER TABLE disputes ADD COLUMN IF NOT EXISTS razorpay_status VARCHAR(64)`,
+    `ALTER TABLE disputes ADD COLUMN IF NOT EXISTS razorpay_contested_at BIGINT`,
+    `ALTER TABLE disputes ADD COLUMN IF NOT EXISTS razorpay_document_ids JSONB`,
+    `ALTER TABLE payments ADD COLUMN IF NOT EXISTS dispute_id VARCHAR(64)`,
+  ];
+  for (const sql of alterColumns) {
+    try {
+      await db.query(sql);
+    } catch (_) {
+      // column may already exist with different semantics in older PGlite
+    }
+  }
+
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS webhook_events (
+      id VARCHAR(64) PRIMARY KEY,
+      event_type VARCHAR(128) NOT NULL,
+      dispute_id VARCHAR(64),
+      payload JSONB NOT NULL,
+      signature_valid BOOLEAN NOT NULL,
+      processed_at BIGINT,
+      created_at BIGINT NOT NULL
+    );
+  `);
+
   // Indexes for high performance
   await db.query(`CREATE INDEX IF NOT EXISTS idx_disputes_status ON disputes(status);`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_disputes_split ON disputes(split);`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_disputes_reason_code ON disputes(reason_code);`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_audit_dispute_id ON audit_logs(dispute_id);`);
   await db.query(`CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);`);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_webhook_events_dispute ON webhook_events(dispute_id);`);
 }

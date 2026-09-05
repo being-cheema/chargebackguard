@@ -161,3 +161,27 @@ export interface ReasonCodeInfo {
   secondaryEvidence: EvidenceKey[];
   baseWinRate: number;
 }
+
+// ============================================================
+// Razorpay Integration (real Disputes/Documents/Webhooks APIs)
+// ============================================================
+
+export interface RazorpayPaymentRecord {
+  payment_id: string;
+  amount: number;
+  currency: string;
+  method: string;
+  created_at: number;
+  dispute_id?: string | null;
+  dispute_status?: string | null;
+  reason_code?: string | null;
+}
+
+export interface WebhookEventRecord {
+  id: string;
+  event_type: string;
+  dispute_id: string | null;
+  signature_valid: boolean;
+  processed_at: number | null;
+  created_at: number;
+}

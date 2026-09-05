@@ -4,12 +4,15 @@
   "description": "ChargebackGuard Backend - AI-Assisted Chargeback Evidence Responder",
   "main": "dist/src/index.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "cross-env PORT=5050 tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/src/index.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --verbose --forceExit",
     "seed": "tsx src/dataset/seed.ts",
-    "evaluate": "tsx src/metrics/evaluate.ts"
+    "seed:payments": "tsx src/dataset/update_real_payments.ts",
+    "seed:full": "tsx src/dataset/seed.ts --payments",
+    "evaluate": "tsx src/metrics/evaluate.ts",
+    "evaluate:integrity": "tsx src/metrics/integrity.ts"
   },
   "keywords": [
     "razorpay",

@@ -8,24 +8,10 @@ import { createAuditLogEntry } from '../audit/auditService';
 import { requireReviewerAuth, AuthenticatedRequest } from '../middleware/auth';
 import { validateBody, gateDisputeSchema, reviewDisputeSchema } from '../middleware/validation';
 import { validateExplanationLetter } from '../drafting/validator';
+import { parseDisputeRow, toPublicDispute } from '../utils/disputeSerializer';
+import { getDecisionGateThreshold } from '../config/settings';
 
 export const disputeRouter = Router();
-
-// Helper to normalize dispute database row
-function parseDisputeRow(row: any): DisputeRecord {
-  return {
-    ...row,
-    amount: Number(row.amount),
-    respond_by: Number(row.respond_by),
-    created_at: Number(row.created_at),
-    days_since_transaction: Number(row.days_since_transaction),
-    customer_dispute_history_count: Number(row.customer_dispute_history_count),
-    merchant_response_time_hours: Number(row.merchant_response_time_hours),
-    win_score: row.win_score ? Number(row.win_score) : undefined,
-    evidence: typeof row.evidence === 'string' ? JSON.parse(row.evidence) : row.evidence,
-    factors: typeof row.factors === 'string' ? JSON.parse(row.factors) : row.factors,
-  };
-}
 
 // GET /api/disputes - list with search, filter, sort, pagination (Public read-only)
 disputeRouter.get('/', async (req: Request, res: Response): Promise<void> => {
@@ -97,7 +83,7 @@ disputeRouter.get('/', async (req: Request, res: Response): Promise<void> => {
     params.push(Number(limit), Number(offset));
 
     const result = await db.query(query, params);
-    const disputes = result.rows.map(parseDisputeRow);
+    const disputes = result.rows.map((row) => toPublicDispute(row));
 
     // Compute summary counts
     const statusCountsResult = await db.query(`
@@ -137,7 +123,7 @@ disputeRouter.get('/:id', async (req: Request, res: Response): Promise<void> => 
     const scoreResult = calculateDisputeScore(dispute);
 
     res.json({
-      dispute,
+      dispute: toPublicDispute(result.rows[0]),
       scoreResult,
     });
   } catch (err: any) {
@@ -163,7 +149,7 @@ disputeRouter.post(
       }
 
       const dispute = parseDisputeRow(result.rows[0]);
-      const threshold = req.body.threshold ?? 0.75;
+      const threshold = req.body.threshold ?? getDecisionGateThreshold();
       const scoreResult = calculateDisputeScore(dispute, { threshold });
 
       // Update dispute score in DB
@@ -228,16 +214,20 @@ disputeRouter.post(
       // Audit log
       await createAuditLogEntry({
         dispute_id: dispute.id,
-        action: 'DRAFTED',
+        action: draftResult.llmRejected ? 'DRAFT_REJECTED_HALLUCINATION' : 'DRAFTED',
         score: scoreResult.score,
-        decision: `Letter drafted via ${draftResult.provider} (${draftResult.characterCount} chars)`,
-        threshold_used: 0.75,
+        decision: draftResult.llmRejected
+          ? `LLM draft rejected; fallback via ${draftResult.provider}`
+          : `Letter drafted via ${draftResult.provider} (${draftResult.characterCount} chars)`,
+        threshold_used: getDecisionGateThreshold(),
         factors: scoreResult.factors,
         explanation_letter: draftResult.letter,
         reviewer_id: req.reviewer?.id,
-        reviewer_notes: draftResult.validation.isValid
-          ? `Anti-hallucination validation PASSED. Referenced: [${draftResult.validation.referencedPresentEvidence.join(', ')}].`
-          : `Validation warnings: ${draftResult.validation.violations.join('; ')}`,
+        reviewer_notes: draftResult.llmRejected
+          ? `LLM REJECTED: ${draftResult.llmViolations?.join('; ')}. Fallback validation: ${draftResult.validation.isValid ? 'PASSED' : 'FAILED'}.`
+          : draftResult.validation.isValid
+            ? `Anti-hallucination validation PASSED. Referenced: [${draftResult.validation.referencedPresentEvidence.join(', ')}].`
+            : `Validation warnings: ${draftResult.validation.violations.join('; ')}`,
       });
 
       res.json({
@@ -268,7 +258,7 @@ disputeRouter.post(
       }
 
       const dispute = parseDisputeRow(result.rows[0]);
-      const threshold = req.body.threshold ?? 0.75;
+      const threshold = req.body.threshold ?? getDecisionGateThreshold();
       const gateResult = await processDisputeDecisionGate(dispute, threshold);
 
       res.json({
@@ -290,7 +280,7 @@ disputeRouter.post(
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const db = await getDb();
-      const threshold = req.body.threshold ?? 0.75;
+      const threshold = req.body.threshold ?? getDecisionGateThreshold();
 
       const result = await db.query(
         `SELECT * FROM disputes WHERE status IN ('open', 'under_review') ORDER BY created_at DESC LIMIT 100`
@@ -382,7 +372,7 @@ disputeRouter.post(
         action: auditAction,
         score: dispute.win_score || null,
         decision: `Reviewer ${reviewer.name} (${reviewer.email}) performed ${action}. Status: ${newStatus}`,
-        threshold_used: 0.75,
+        threshold_used: getDecisionGateThreshold(),
         factors: dispute.factors || null,
         explanation_letter: newEvidence.explanation_letter,
         reviewer_id: reviewer.id,

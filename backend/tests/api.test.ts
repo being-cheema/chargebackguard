@@ -1,19 +1,38 @@
 import request from 'supertest';
+import path from 'path';
+import fs from 'fs';
 import { app } from '../src/app';
-import { getDb } from '../src/db';
+import { getDb, resetDbForTests } from '../src/db';
 import { seedDatabase } from '../src/dataset/seed';
+
+const TEST_DB_DIR = path.resolve(__dirname, '../data/pglite_test_db');
 
 describe('ChargebackGuard API Integration Tests', () => {
   let reviewerToken = '';
   let sampleDisputeId = '';
 
   beforeAll(async () => {
-    // Seed test dataset
-    await seedDatabase(50);
+    if (fs.existsSync(TEST_DB_DIR)) {
+      fs.rmSync(TEST_DB_DIR, { recursive: true, force: true });
+    }
+    process.env.PGLITE_DATA_DIR = TEST_DB_DIR;
+    resetDbForTests();
+
+    await seedDatabase(50, { writeArtifacts: false, includePayments: false });
 
     const db = await getDb();
     const result = await db.query(`SELECT id FROM disputes LIMIT 1`);
     sampleDisputeId = result.rows[0].id;
+  });
+
+  afterAll(async () => {
+    const db = await getDb();
+    await db.close();
+    resetDbForTests();
+    delete process.env.PGLITE_DATA_DIR;
+    if (fs.existsSync(TEST_DB_DIR)) {
+      fs.rmSync(TEST_DB_DIR, { recursive: true, force: true });
+    }
   });
 
   test('GET /health returns healthy status and dispute count', async () => {
@@ -21,6 +40,7 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('healthy');
     expect(res.body.totalDisputesInDb).toBeGreaterThan(0);
+    expect(res.body.decisionGateThreshold).toBeDefined();
   });
 
   test('POST /api/auth/login succeeds with valid credentials and returns JWT', async () => {
@@ -45,12 +65,14 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.body.error).toBe('Invalid Credentials');
   });
 
-  test('GET /api/disputes returns paginated disputes list and status counts (Public)', async () => {
+  test('GET /api/disputes returns paginated disputes without eval labels (Public)', async () => {
     const res = await request(app).get('/api/disputes?limit=10&offset=0');
     expect(res.status).toBe(200);
     expect(res.body.disputes.length).toBeLessThanOrEqual(10);
     expect(res.body.total).toBeGreaterThan(0);
     expect(res.body.statusCounts).toBeDefined();
+    expect(res.body.disputes[0].ground_truth_outcome).toBeUndefined();
+    expect(res.body.disputes[0].split).toBeUndefined();
   });
 
   test('GET /api/disputes/:id returns single dispute with score breakdown (Public)', async () => {
@@ -59,6 +81,7 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.body.dispute.id).toBe(sampleDisputeId);
     expect(res.body.scoreResult).toBeDefined();
     expect(res.body.scoreResult.score).toBeGreaterThanOrEqual(0);
+    expect(res.body.dispute.ground_truth_outcome).toBeUndefined();
   });
 
   test('POST /api/disputes/:id/score rejects unauthenticated requests with 401', async () => {
@@ -153,10 +176,9 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.body.status).toBe('ready_to_submit');
     expect(res.body.auditLogId).toBeDefined();
 
-    // Verify audit log has the reviewer entry
     const auditRes = await request(app).get(`/api/audit/${sampleDisputeId}`);
     expect(auditRes.status).toBe(200);
-    expect(auditRes.body.logs.some((l: any) => l.action === 'HUMAN_APPROVED')).toBe(true);
+    expect(auditRes.body.logs.some((l: { action: string }) => l.action === 'HUMAN_APPROVED')).toBe(true);
   });
 
   test('GET /api/metrics returns held-out metrics report and sensitivity curve (Public)', async () => {
@@ -199,5 +221,31 @@ describe('ChargebackGuard API Integration Tests', () => {
     expect(res.body.scoreResult.score).toBeGreaterThanOrEqual(0.75);
     expect(res.body.isAutoSubmitted).toBe(true);
     expect(res.body.draftResult.validation.isValid).toBe(true);
+  });
+
+  test('POST /api/webhooks/simulate ingests a dispute (JWT)', async () => {
+    const res = await request(app)
+      .post('/api/webhooks/simulate')
+      .set('Authorization', `Bearer ${reviewerToken}`)
+      .send({
+        amount: 550000,
+        reason_code: 'RZP04',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.disputeId).toBeDefined();
+    expect(res.body.action).toBe('dispute_created_scored');
+  });
+
+  test('GET /api/razorpay/status returns integration status', async () => {
+    const res = await request(app).get('/api/razorpay/status');
+    expect(res.status).toBe(200);
+    expect(res.body.capturedPaymentsCount).toBe(9);
+  });
+
+  test('GET /api/razorpay/payments returns payment list', async () => {
+    const res = await request(app).get('/api/razorpay/payments');
+    expect(res.status).toBe(200);
+    expect(res.body.payments).toBeDefined();
   });
 });

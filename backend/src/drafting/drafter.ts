@@ -9,6 +9,8 @@ export interface DraftResult {
   provider: 'anthropic_claude' | 'deterministic_fallback';
   validation: ValidationResult;
   model?: string;
+  llmRejected?: boolean;
+  llmViolations?: string[];
 }
 
 /**
@@ -77,11 +79,23 @@ CRITICAL RULES:
           provider: 'anthropic_claude',
           validation,
           model: 'claude-3-5-sonnet-20241022',
+          llmRejected: false,
         };
       } else {
         console.warn(
           `⚠️ Claude draft failed anti-hallucination validation: ${validation.violations.join('; ')}. Falling back to verified generator.`
         );
+        // Fall through to deterministic fallback with rejection metadata
+        const fallbackLetter = generateDeterministicLetter(dispute, scoreResult);
+        const fallbackValidation = validateExplanationLetter(fallbackLetter, dispute);
+        return {
+          letter: fallbackLetter,
+          characterCount: fallbackLetter.length,
+          provider: 'deterministic_fallback',
+          validation: fallbackValidation,
+          llmRejected: true,
+          llmViolations: validation.violations,
+        };
       }
     } catch (err: any) {
       console.warn(`⚠️ Anthropic API call failed (${err.message}). Using deterministic fallback drafter.`);
@@ -97,6 +111,7 @@ CRITICAL RULES:
     characterCount: fallbackLetter.length,
     provider: 'deterministic_fallback',
     validation,
+    llmRejected: false,
   };
 }
 

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import { runEvaluation } from '../metrics/evaluate';
+import { verifyDatasetIntegrity } from '../metrics/integrity';
 import { requireReviewerAuth } from '../middleware/auth';
 
 export const metricsRouter = Router();
@@ -21,6 +22,12 @@ metricsRouter.get('/', async (req: Request, res: Response): Promise<void> => {
     console.error('Fetch metrics error:', err);
     res.status(500).json({ error: 'Server Error', message: err.message });
   }
+});
+
+// GET /api/metrics/integrity - verify committed dataset checksums (Public)
+metricsRouter.get('/integrity', (_req, res) => {
+  const result = verifyDatasetIntegrity();
+  res.status(result.ok ? 200 : 409).json(result);
 });
 
 // POST /api/metrics/evaluate - re-run held-out evaluation and regenerate reports (Requires Reviewer Auth)

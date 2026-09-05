@@ -5,17 +5,19 @@ import type {
   AuditLogRecord,
   MetricEvaluationReport,
   ReasonCodeInfo,
+  RazorpayPaymentRecord,
+  WebhookEventRecord,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 async function fetchJson<T>(url: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${url}`, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
       ...options.headers,
     },
-    ...options,
   });
 
   const data = await res.json();
@@ -212,6 +214,85 @@ export const api = {
       isAutoSubmitted: boolean;
     }>('/simulate', {
       method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Razorpay Integration (Public status/read, auth for mutating actions)
+  getRazorpayStatus: async () => {
+    return fetchJson<{
+      configured: boolean;
+      contestMode: 'submit' | 'draft_only';
+      capturedPaymentsCount: number;
+      docsUrl: string;
+    }>('/razorpay/status');
+  },
+
+  getRazorpayPayments: async () => {
+    return fetchJson<{
+      payments: RazorpayPaymentRecord[];
+      source: 'database' | 'hardcoded_fallback';
+      total?: number;
+      note?: string;
+    }>('/razorpay/payments');
+  },
+
+  syncRazorpayDisputes: async (token?: string | null) => {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetchJson<{
+      message: string;
+      synced: Array<{ id: string; status: string }>;
+    }>('/razorpay/sync', {
+      method: 'POST',
+      headers,
+    });
+  },
+
+  contestRazorpayDispute: async (id: string, token?: string | null) => {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetchJson<{
+      message: string;
+      contestResult: { mode: 'submit' | 'draft_only'; documentIds: string[]; usedSampleEvidence: boolean };
+      auditLogId: string;
+      dispute: DisputeRecord;
+    }>(`/razorpay/disputes/${id}/contest`, {
+      method: 'POST',
+      headers,
+    });
+  },
+
+  getRazorpayWebhookEvents: async (limit: number = 20) => {
+    return fetchJson<{
+      total: number;
+      events: WebhookEventRecord[];
+    }>(`/razorpay/webhook-events?limit=${limit}`);
+  },
+
+  getWebhookStatus: async () => {
+    return fetchJson<{
+      webhookEndpoint: string;
+      simulateEndpoint: string;
+      razorpayConfigured: boolean;
+      contestMode: 'submit' | 'draft_only';
+      note: string;
+    }>('/webhooks/status');
+  },
+
+  simulateWebhook: async (
+    payload: { payment_id?: string; amount?: number; reason_code?: string; status?: string },
+    token?: string | null
+  ) => {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    return fetchJson<{
+      message: string;
+      event: string;
+      signature: string;
+    }>('/webhooks/simulate', {
+      method: 'POST',
+      headers,
       body: JSON.stringify(payload),
     });
   },
